@@ -174,4 +174,15 @@ public class TaiKhoanDAO {
         tk.setBatBuocDoiMatKhau(rs.getBoolean("BatBuocDoiMatKhau"));
         return tk;
     }
+
+    /** Bật/tắt tài khoản (vô hiệu hóa khi đăng nhập sai quá nhiều hoặc Admin khóa). */
+    public boolean datTrangThai(int maTK, boolean trangThai) throws SQLException {
+        String sql = "UPDATE TaiKhoan SET TrangThai=? WHERE MaTK=?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBoolean(1, trangThai);
+            ps.setInt(2, maTK);
+            return ps.executeUpdate() > 0;
+        }
+    }
 }

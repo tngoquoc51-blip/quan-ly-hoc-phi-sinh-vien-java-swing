@@ -5,6 +5,8 @@ import vn.edu.eaut.qlhocphi.bus.NhatKyHeThongService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.TaiKhoan;
+import vn.edu.eaut.qlhocphi.model.KetQuaDangNhap;
+import vn.edu.eaut.qlhocphi.model.VaiTro;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -384,35 +386,31 @@ public class LoginFrame extends JFrame {
         lblThongBao.setForeground(UITheme.TEXT_MUTED);
         lblThongBao.setText("Đang Kiểm Tra...");
 
-        SwingWorker<TaiKhoan, Void> worker = new SwingWorker<>() {
+        SwingWorker<KetQuaDangNhap, Void> worker = new SwingWorker<>() {
             @Override
-            protected TaiKhoan doInBackground() throws SQLException {
-                return authService.dangNhap(tenDangNhap, matKhau);
+            protected KetQuaDangNhap doInBackground() throws SQLException {
+                KetQuaDangNhap kq = authService.dangNhapChiTiet(tenDangNhap, matKhau, null);
+                if (kq.isThanhCong() && kq.getTaiKhoan().getVaiTro() == VaiTro.SINHVIEN) {
+                    return KetQuaDangNhap.thatBai(
+                            "Sinh viên vui lòng dùng nút ĐĂNG NHẬP SINH VIÊN.");
+                }
+                return kq;
             }
 
             @Override
             protected void done() {
                 btnDangNhap.setEnabled(true);
                 try {
-                    TaiKhoan tk = get();
-                    if (tk == null) {
+                    KetQuaDangNhap kq = get();
+                    if (!kq.isThanhCong()) {
                         lblThongBao.setForeground(UITheme.DANGER);
-                        lblThongBao.setText("Sai Tên Đăng Nhập Hoặc Mật Khẩu");
+                        lblThongBao.setText(kq.getThongBaoLoi());
                         return;
                     }
-                    // Sinh viên không được vào cổng cán bộ
-                    if (tk.getVaiTro() == vn.edu.eaut.qlhocphi.model.VaiTro.SINHVIEN) {
-                        lblThongBao.setForeground(UITheme.DANGER);
-                        lblThongBao.setText("Tài khoản sinh viên vui lòng bấm \"ĐĂNG NHẬP SINH VIÊN\"");
-                        return;
-                    }
+                    TaiKhoan tk = kq.getTaiKhoan();
                     nhatKyHeThongService.ghi(tk, "DANG_NHAP", tk.getVaiTro().toString(),
                             "Đăng nhập thành công: " + tk.getTenDangNhap() + " (" + tk.getHoTen() + ")");
                     if (tk.isBatBuocDoiMatKhau()) {
-                        // Tài khoản đang bị bật cờ "bắt buộc đổi mật khẩu" (ví dụ: Admin
-                        // vừa đặt lại mật khẩu, hoặc vừa khôi phục qua Google từ lần trước
-                        // nhưng chưa đổi xong) -> bật dialog đổi mật khẩu trước, chỉ mở
-                        // MainFrame SAU KHI đổi xong.
                         vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog dialog =
                                 new vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog(
                                         LoginFrame.this, tk, true, () -> {
@@ -432,4 +430,4 @@ public class LoginFrame extends JFrame {
         };
         worker.execute();
     }
-}
+    }

@@ -12,6 +12,7 @@ import vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog;
 import vn.edu.eaut.qlhocphi.gui.sinhvien.QuenMatKhauDialog;
 import vn.edu.eaut.qlhocphi.model.TaiKhoan;
 import vn.edu.eaut.qlhocphi.model.VaiTro;
+import vn.edu.eaut.qlhocphi.model.KetQuaDangNhap;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -389,28 +390,23 @@ public class StudentLoginFrame extends JFrame {
         lblThongBao.setForeground(UITheme.TEXT_MUTED);
         lblThongBao.setText("Đang Kiểm Tra...");
 
-        SwingWorker<TaiKhoan, Void> worker = new SwingWorker<>() {
+        SwingWorker<KetQuaDangNhap, Void> worker = new SwingWorker<>() {
             @Override
-            protected TaiKhoan doInBackground() throws SQLException {
-                return authService.dangNhap(tenDangNhap, matKhau);
+            protected KetQuaDangNhap doInBackground() throws SQLException {
+                return authService.dangNhapChiTiet(tenDangNhap, matKhau, VaiTro.SINHVIEN);
             }
 
             @Override
             protected void done() {
                 btnDangNhap.setEnabled(true);
                 try {
-                    TaiKhoan tk = get();
-                    if (tk == null) {
+                    KetQuaDangNhap kq = get();
+                    if (!kq.isThanhCong()) {
                         lblThongBao.setForeground(UITheme.DANGER);
-                        lblThongBao.setText("Sai Tên Đăng Nhập Hoặc Mật Khẩu");
+                        lblThongBao.setText(kq.getThongBaoLoi());
                         return;
                     }
-                    // Chỉ sinh viên được vào cổng này
-                    if (tk.getVaiTro() != VaiTro.SINHVIEN) {
-                        lblThongBao.setForeground(UITheme.DANGER);
-                        lblThongBao.setText("Cổng này chỉ dành cho sinh viên. Cán bộ đăng nhập ở màn hình chính.");
-                        return;
-                    }
+                    TaiKhoan tk = kq.getTaiKhoan();
                     AuditContext.datNguoiDung(tk);
                     nhatKyHeThongService.ghi(tk, "DANG_NHAP", tk.getVaiTro().toString(),
                             "Sinh viên đăng nhập: " + tk.getTenDangNhap() + " (" + tk.getHoTen() + ")");
