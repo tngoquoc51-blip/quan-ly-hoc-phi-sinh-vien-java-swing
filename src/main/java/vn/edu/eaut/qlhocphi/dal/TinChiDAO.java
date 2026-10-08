@@ -21,7 +21,6 @@ public class TinChiDAO {
                 if (rs.next()) return map(rs);
             }
         }
-        // Chưa có dòng tín chỉ → trả về 0 kèm thông tin SV
         String sql2 = "SELECT MaSV, HoTen, NamNhapHoc, NamThu, TrangThaiHoc FROM SinhVien WHERE MaSV = ?";
         try (Connection c = DBConnection.getConnection();
              PreparedStatement ps = c.prepareStatement(sql2)) {
@@ -56,6 +55,8 @@ public class TinChiDAO {
                     n.setTinChiDat(rs.getInt("TinChiDat"));
                     n.setTinChiRut(rs.getInt("TinChiRut"));
                     n.setGhiChu(rs.getString("GhiChu"));
+                    n.setDiemTB10(getDoubleSafe(rs, "DtbHe10"));
+                    n.setDiemTB4(getDoubleSafe(rs, "DtbHe4"));
                     list.add(n);
                 }
             }
@@ -69,6 +70,7 @@ public class TinChiDAO {
         t.setTinChiTichLuy(rs.getInt("TinChiTichLuy"));
         t.setTinChiBiRut(rs.getInt("TinChiBiRut"));
         t.setTinChiDangKy(rs.getInt("TinChiDangKy"));
+        t.setTinChiDaHoc(rs.getInt("TinChiTichLuy"));
         Timestamp ts = rs.getTimestamp("CapNhatLuc");
         if (ts != null) t.setCapNhatLuc(ts.toLocalDateTime());
         try {
@@ -77,6 +79,25 @@ public class TinChiDAO {
             t.setNamThu((Integer) rs.getObject("NamThu"));
             t.setTrangThaiHoc(rs.getString("TrangThaiHoc"));
         } catch (SQLException ignored) {}
+        // Cột điểm từ migration (DtbHe10 / DtbHe4 / ...)
+        double d10 = getDoubleSafe(rs, "DtbHe10");
+        double d4 = getDoubleSafe(rs, "DtbHe4");
+        double tl10 = getDoubleSafe(rs, "DtbTichLuyHe10");
+        double tl4 = getDoubleSafe(rs, "DtbTichLuyHe4");
+        t.setDiemTB10(d10);
+        t.setDiemTB4(d4);
+        t.setDiemTBTichLuy10(tl10 > 0 ? tl10 : d10);
+        t.setDiemTBTichLuy4(tl4 > 0 ? tl4 : d4);
         return t;
+    }
+
+    private static double getDoubleSafe(ResultSet rs, String col) {
+        try {
+            Object o = rs.getObject(col);
+            if (o == null) return 0;
+            return rs.getDouble(col);
+        } catch (SQLException e) {
+            return 0;
+        }
     }
 }

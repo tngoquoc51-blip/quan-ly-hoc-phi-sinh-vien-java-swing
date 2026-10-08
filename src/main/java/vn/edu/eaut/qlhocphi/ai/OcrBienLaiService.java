@@ -42,8 +42,37 @@ public class OcrBienLaiService {
     }
 
     private String maHoaAnh(BufferedImage anh) throws Exception {
+        // JPEG không hỗ trợ alpha (PNG trong suốt) → chuyển RGB + nền trắng
+        BufferedImage rgb = anh;
+        if (anh.getType() != BufferedImage.TYPE_INT_RGB) {
+            rgb = new BufferedImage(anh.getWidth(), anh.getHeight(), BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D g = rgb.createGraphics();
+            g.setColor(java.awt.Color.WHITE);
+            g.fillRect(0, 0, anh.getWidth(), anh.getHeight());
+            g.drawImage(anh, 0, 0, null);
+            g.dispose();
+        }
+        // Thu nhỏ nếu ảnh quá lớn (tránh Gemini 400)
+        int maxCanh = 1600;
+        if (rgb.getWidth() > maxCanh || rgb.getHeight() > maxCanh) {
+            double scale = Math.min(
+                    (double) maxCanh / rgb.getWidth(),
+                    (double) maxCanh / rgb.getHeight());
+            int w = Math.max(1, (int) (rgb.getWidth() * scale));
+            int h = Math.max(1, (int) (rgb.getHeight() * scale));
+            BufferedImage scaled = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D g2 = scaled.createGraphics();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.drawImage(rgb, 0, 0, w, h, null);
+            g2.dispose();
+            rgb = scaled;
+        }
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(anh, "jpg", baos);
+        if (!ImageIO.write(rgb, "jpg", baos) || baos.size() == 0) {
+            throw new IllegalStateException(
+                    "Không ghi được ảnh JPEG từ biên lai. Thử file JPG/PNG khác, rõ nét hơn.");
+        }
         return Base64.getEncoder().encodeToString(baos.toByteArray());
     }
 

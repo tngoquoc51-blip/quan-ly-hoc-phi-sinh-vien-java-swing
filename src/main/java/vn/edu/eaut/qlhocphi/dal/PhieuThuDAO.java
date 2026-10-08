@@ -33,9 +33,10 @@ public class PhieuThuDAO {
                     "JOIN SinhVien sv ON sv.MaSV = hd.MaSV " +
                     "JOIN HocKy hk ON hk.MaHocKy = hd.MaHocKy ";
 
-    /** N giao dich gan day nhat toan truong (moi hoa don), dung cho Bang dieu khien Ke toan. */
-    public List<PhieuThu> layGanDayNhat(int gioiHan) throws SQLException {
-        String sql = SELECT_JOIN + "ORDER BY pt.NgayNop DESC LIMIT ?";
+    /** N giao dich gan day nhat toan truong (moi hoa don), dung cho Bang dieu khien Ke toan. */    public List<PhieuThu> layGanDayNhat(int gioiHan) throws SQLException {
+        // MaPhieuThu tăng khi INSERT → phiếu vừa thu luôn lên đầu
+        // (tránh data mẫu có NgayNop tương lai che mất giao dịch thật)
+        String sql = SELECT_JOIN + "ORDER BY pt.MaPhieuThu DESC LIMIT ?";
         List<PhieuThu> list = new ArrayList<>();
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -74,14 +75,21 @@ public class PhieuThuDAO {
     }
 
     public int them(PhieuThu pt) throws SQLException {
-        String sql = "INSERT INTO PhieuThu (MaHoaDon,SoTienNop,HinhThuc,MaGiaoDich,NguoiThu) VALUES (?,?,?,?,?)";
+        // Ghi chuỗi giờ máy — không qua Timestamp (tránh lệch UTC)
+        String sql = "INSERT INTO PhieuThu (MaHoaDon,SoTienNop,NgayNop,HinhThuc,MaGiaoDich,NguoiThu) VALUES (?,?,?,?,?,?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            java.time.LocalDateTime lucNop = pt.getNgayNop() != null
+                    ? pt.getNgayNop()
+                    : java.time.LocalDateTime.now();
+            String ngayStr = lucNop.format(
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             ps.setInt(1, pt.getMaHoaDon());
             ps.setBigDecimal(2, pt.getSoTienNop());
-            ps.setString(3, pt.getHinhThuc());
-            ps.setString(4, pt.getMaGiaoDich());
-            ps.setString(5, pt.getNguoiThu());
+            ps.setString(3, ngayStr);   // ← quan trọng: setString, không setTimestamp
+            ps.setString(4, pt.getHinhThuc());
+            ps.setString(5, pt.getMaGiaoDich());
+            ps.setString(6, pt.getNguoiThu());
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) return keys.getInt(1);
@@ -95,8 +103,9 @@ public class PhieuThuDAO {
         pt.setMaPhieuThu(rs.getInt("MaPhieuThu"));
         pt.setMaHoaDon(rs.getInt("MaHoaDon"));
         pt.setSoTienNop(rs.getBigDecimal("SoTienNop"));
-        Timestamp ngay = rs.getTimestamp("NgayNop");
-        pt.setNgayNop(ngay != null ? ngay.toLocalDateTime() : null);
+        // Đọc LocalDateTime trực tiếp — không dùng Timestamp + toLocalDateTime()
+        java.time.LocalDateTime ngay = rs.getObject("NgayNop", java.time.LocalDateTime.class);
+        pt.setNgayNop(ngay);
         pt.setHinhThuc(rs.getString("HinhThuc"));
         pt.setMaGiaoDich(rs.getString("MaGiaoDich"));
         pt.setNguoiThu(rs.getString("NguoiThu"));

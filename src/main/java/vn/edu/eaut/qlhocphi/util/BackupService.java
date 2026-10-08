@@ -8,13 +8,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Sao luu / phuc hoi CSDL MySQL bang cach goi cong cu dong hanh mysqldump / mysql
- * (yeu cau may chay ung dung da cai MySQL client va co trong PATH).
- *
- * Day la cach lam pho bien, don gian cho ung dung desktop noi bo; voi he thong
- * quy mo lon hon nen chuyen sang co che backup tu dong cua chinh MySQL Server.
+ * Sao lưu / phục hồi CSDL MySQL bằng mysqldump / mysql.
+ * Dùng đường dẫn tuyệt đối tới MySQL Server 9.4 (không phụ thuộc PATH Windows).
  */
 public class BackupService {
+
+    /** Đường dẫn tuyệt đối – máy bạn đã xác nhận chạy được */
+    private static final String MYSQLDUMP =
+            "C:\\Program Files\\MySQL\\MySQL Server 9.4\\bin\\mysqldump.exe";
+    private static final String MYSQL =
+            "C:\\Program Files\\MySQL\\MySQL Server 9.4\\bin\\mysql.exe";
 
     private static class ThongTinKetNoi {
         String host = "localhost";
@@ -22,14 +25,14 @@ public class BackupService {
         String database = "qlhocphi";
     }
 
-    /** Sao luu toan bo CSDL ra 1 file .sql. */
+    /** Sao lưu toàn bộ CSDL ra 1 file .sql. */
     public void saoLuu(File fileDich) throws IOException, InterruptedException {
         ThongTinKetNoi tt = docThongTinKetNoi();
         String user = AppConfig.get("db.username");
         String pass = AppConfig.get("db.password");
 
         ProcessBuilder pb = new ProcessBuilder(
-                "mysqldump",
+                MYSQLDUMP,
                 "-h", tt.host,
                 "-P", tt.port,
                 "-u", user,
@@ -42,22 +45,24 @@ public class BackupService {
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             String loi = new String(process.getErrorStream().readAllBytes());
-            throw new IOException("mysqldump ket thuc voi ma loi " + exitCode + (loi.isBlank() ? "" : (": " + loi)));
+            throw new IOException("mysqldump kết thúc với mã lỗi " + exitCode
+                    + (loi.isBlank() ? "" : (": " + loi)));
         }
     }
 
-    /** Phuc hoi CSDL tu 1 file .sql (chay lai toan bo script, se ghi de du lieu hien tai). */
+    /** Phục hồi CSDL từ file .sql (ghi đè dữ liệu hiện tại). */
     public void phucHoi(File fileNguon) throws IOException, InterruptedException {
         ThongTinKetNoi tt = docThongTinKetNoi();
         String user = AppConfig.get("db.username");
         String pass = AppConfig.get("db.password");
 
         ProcessBuilder pb = new ProcessBuilder(
-                "mysql",
+                MYSQL,
                 "-h", tt.host,
                 "-P", tt.port,
                 "-u", user,
-                "-p" + pass
+                "-p" + pass,
+                tt.database
         );
         pb.redirectInput(fileNguon);
         pb.redirectErrorStream(false);
@@ -65,14 +70,16 @@ public class BackupService {
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             String loi = new String(process.getErrorStream().readAllBytes());
-            throw new IOException("mysql ket thuc voi ma loi " + exitCode + (loi.isBlank() ? "" : (": " + loi)));
+            throw new IOException("mysql kết thúc với mã lỗi " + exitCode
+                    + (loi.isBlank() ? "" : (": " + loi)));
         }
     }
 
-    /** Tach host/port/database tu chuoi db.url dang jdbc:mysql://host:port/dbname?... */
+    /** Tách host/port/database từ db.url */
     private ThongTinKetNoi docThongTinKetNoi() {
         ThongTinKetNoi tt = new ThongTinKetNoi();
         String url = AppConfig.get("db.url");
+        if (url == null) return tt;
         Pattern pattern = Pattern.compile("jdbc:mysql://([^:/]+)(:(\\d+))?/([^?]+)");
         Matcher matcher = pattern.matcher(url);
         if (matcher.find()) {

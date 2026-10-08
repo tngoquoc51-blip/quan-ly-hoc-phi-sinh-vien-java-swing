@@ -177,7 +177,14 @@ public class NhatKyPanel extends JPanel {
         gbc.gridx = col++;
         toolbar.add(UIUtils.formLabel("Hành động:"), gbc);
 
-        cboHanhDong = new JComboBox<>(new String[]{"Tất cả hành động", "THÊM", "SỬA", "XÓA", "THANH_TOÁN", "ĐĂNG_NHẬP"});
+        cboHanhDong = new JComboBox<>(new String[]{
+                "Tất cả hành động",
+                "Đăng nhập",
+                "Đăng xuất",
+                "Thêm hóa đơn",
+                "Thu tiền",
+                "Sao lưu"
+        });
         cboHanhDong.setFont(UITheme.FONT_BASE);
         cboHanhDong.addActionListener(e -> apDungBoLoc());
         gbc.gridx = col++;
@@ -258,12 +265,28 @@ public class NhatKyPanel extends JPanel {
         if (!tuKhoa.isEmpty()) {
             danhSachLoc.add(RowFilter.regexFilter("(?i)" + Pattern.quote(tuKhoa), 1, 3, 4));
         }
-        String hanhDong = (String) cboHanhDong.getSelectedItem();
-        if (hanhDong != null && !hanhDong.equals("Tất cả hành động") && !hanhDong.equals("Tat ca hanh dong")) {
-            danhSachLoc.add(RowFilter.regexFilter("^" + Pattern.quote(hanhDong) + "$", 2));
+
+        String chon = (String) cboHanhDong.getSelectedItem();
+        String maLoc = mapHanhDongSangMa(chon);
+        if (maLoc != null) {
+            danhSachLoc.add(RowFilter.regexFilter("^" + Pattern.quote(maLoc) + "$", 2));
         }
+
         sorter.setRowFilter(danhSachLoc.isEmpty() ? null : RowFilter.andFilter(danhSachLoc));
         capNhatSoLuongHienThi();
+    }
+
+    /** Nhãn trên combo → mã cột HanhDong trong DB. null = không lọc. */
+    private static String mapHanhDongSangMa(String nhan) {
+        if (nhan == null || nhan.startsWith("Tất cả")) return null;
+        return switch (nhan) {
+            case "Đăng nhập"    -> "DANG_NHAP";
+            case "Đăng xuất"    -> "DANG_XUAT";
+            case "Thêm hóa đơn" -> "THEM_HOA_DON";
+            case "Thu tiền"     -> "THU_TIEN";
+            case "Sao lưu"      -> "SAO_LUU";
+            default             -> null;
+        };
     }
 
     private void capNhatSoLuongHienThi() {

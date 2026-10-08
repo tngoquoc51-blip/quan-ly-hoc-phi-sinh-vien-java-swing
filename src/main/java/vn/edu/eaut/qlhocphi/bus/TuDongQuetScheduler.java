@@ -40,15 +40,26 @@ public class TuDongQuetScheduler {
         this.dangBat = true;
         this.daChayLanDau = false;
 
-        // Kiem tra moi 30 giay xem da den gio bat dau / den luot quet lai chua.
         timerKiemTra = new Timer(30_000, e -> kiemTraVaQuetNeuDenGio());
         timerKiemTra.setInitialDelay(0);
         timerKiemTra.start();
+
+        // Ghi Health: đang bật
+        schedulerTrangThai.dangChay("THU_TU_DONG",
+                "Tu dong quet DANG BAT, chu ky " + this.chuKyPhut + " phut");
     }
 
+
     public void dungLai() {
-        if (timerKiemTra != null) { timerKiemTra.stop(); timerKiemTra = null; }
+        if (timerKiemTra != null) {
+            timerKiemTra.stop();
+            timerKiemTra = null;
+        }
+        boolean truocDoBat = dangBat;
         dangBat = false;
+        if (truocDoBat) {
+            schedulerTrangThai.dung("THU_TU_DONG", "Tu dong quet DA TAT");
+        }
     }
 
     private void kiemTraVaQuetNeuDenGio() {
@@ -65,24 +76,33 @@ public class TuDongQuetScheduler {
     }
 
     private void thucHienQuetNen() {
+        schedulerTrangThai.dangChay("THU_TU_DONG", "Dang quet lich thu...");
+
         SwingWorker<ThuTuDongService.KetQuaQuet, Void> worker = new SwingWorker<>() {
             @Override
             protected ThuTuDongService.KetQuaQuet doInBackground() throws Exception {
                 return thuTuDongService.quetMotLan();
             }
+
             @Override
             protected void done() {
                 try {
                     ThuTuDongService.KetQuaQuet kq = get();
-                    for (Consumer<ThuTuDongService.KetQuaQuet> nghe : nguoiNgheKetQua) nghe.accept(kq);
-                } catch (Exception ignored) {
-                    // Loi khi quet nen se khong lam sap app - lan sau se tu thu lai.
+                    // Đổi getSoDaThu() / toString() cho khớp class KetQuaQuet của bạn
+                    String ketQua = "Quet xong: " + (kq != null ? kq.toString() : "OK");
+                    schedulerTrangThai.dung("THU_TU_DONG", ketQua);
+
+                    for (Consumer<ThuTuDongService.KetQuaQuet> nghe : nguoiNgheKetQua) {
+                        nghe.accept(kq);
+                    }
+                } catch (Exception ex) {
+                    schedulerTrangThai.dung("THU_TU_DONG", "Loi quet: " + ex.getMessage());
                 }
             }
         };
         worker.execute();
     }
-
+    private final SchedulerTrangThaiService schedulerTrangThai = new SchedulerTrangThaiService();
     public void themNguoiNghe(Consumer<ThuTuDongService.KetQuaQuet> n) { nguoiNgheKetQua.add(n); }
     public void xoaNguoiNghe(Consumer<ThuTuDongService.KetQuaQuet> n) { nguoiNgheKetQua.remove(n); }
 

@@ -73,7 +73,21 @@ public class KeToanDashboardPanel extends JPanel {
         add(giua, BorderLayout.CENTER);
 
         taiDuLieu();
-        AutoRefreshTimer.gan(this, 20, this::taiDuLieu);
+        // Làm mới mỗi 10 giây khi đang xem Tổng quan (KPI + 2 bảng)
+        AutoRefreshTimer.gan(this, 10, this::taiDuLieu);
+
+        // Quay lại tab Tổng quan → đọc DB ngay, không đợi timer
+        addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0
+                    && isShowing()) {
+                taiDuLieu();
+            }
+        });
+    }
+
+    /** Gọi từ ngoài nếu cần ép làm mới sau khi thu tiền. */
+    public void lamMoi() {
+        taiDuLieu();
     }
 
     // ================== Banner ==================

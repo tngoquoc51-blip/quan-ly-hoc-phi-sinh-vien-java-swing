@@ -8,12 +8,12 @@ public class TinChiSinhVien {
     private int tinChiTichLuy;
     private int tinChiBiRut;
     private int tinChiDangKy;
-    private int tinChiDaHoc;              // Tổng TC đã học (có điểm)
-    private int tongTcChuongTrinh = 183; // Mặc định khung CTĐT
-    private double diemTB10;             // ĐTB học kỳ/năm gần nhất hệ 10
-    private double diemTB4;              // ĐTB hệ 4
-    private double diemTBTichLuy10;      // ĐTB tích lũy hệ 10
-    private double diemTBTichLuy4;       // ĐTB tích lũy hệ 4
+    private int tinChiDaHoc;
+    private int tongTcChuongTrinh = 183;
+    private double diemTB10;
+    private double diemTB4;
+    private double diemTBTichLuy10;
+    private double diemTBTichLuy4;
     private LocalDateTime capNhatLuc;
     private String hoTen;
     private Integer namNhapHoc;
